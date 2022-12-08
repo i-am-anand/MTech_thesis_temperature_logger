@@ -61,7 +61,7 @@ loggingActive=digitalRead(2);
       eepromAddr=1;  */
   // read the ambient analog in value:
             sensorValueSample = analogRead(sensorAmbient);
-  EEPROM.put(eepromAddr,sensorValueSample1);
+  EEPROM.put(eepromAddr,sensorValueSample);
   eepromAddr++;
   eepromAddr++;
             sensorValueSample = analogRead(sensorSample1);
