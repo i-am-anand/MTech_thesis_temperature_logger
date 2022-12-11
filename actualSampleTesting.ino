@@ -19,6 +19,8 @@ NEED to NOTE the time when pin 2 is connected to VCC for timing log-------------
 */
 
 #include <EEPROM.h>
+#define noOfSensors 3
+
 const int sensorAmbient = A0;  // Analog input pin that the ambient LM35 temp sensor is attached to
 const int sensorSample1= A1,sensorSample2= A2,sensorSample3= A3,sensorSample4= A4,sensorSample5= A5; 
 
@@ -46,11 +48,12 @@ void setup() {
   pinMode(sensorSample1,INPUT); pinMode(sensorSample2,INPUT); pinMode(sensorSample3,INPUT);pinMode(sensorSample4,INPUT); pinMode(sensorSample5,INPUT);  
 
         analogReference(INTERNAL);                      // -------------------------------MAJOR
+      
 }
 
 void loop() {
 loggingActive=digitalRead(2);
-  if(loggingActive){  
+  if(loggingActive && eepromAddr<(EEPROM.length()-12)){         //added eeprom length constriant
 /*           memSelect=digitalRead(12);
     if(memSelect){
       eepromAddr=EEPROM.read(0);
@@ -60,35 +63,47 @@ loggingActive=digitalRead(2);
     else
       eepromAddr=1;  */
   // read the ambient analog in value:
+  #if noOfSensors>=1        
             sensorValueSample = analogRead(sensorAmbient);
   EEPROM.put(eepromAddr,sensorValueSample);
   eepromAddr++;
   eepromAddr++;
+  #endif        
+  #if noOfSensors>=2    
             sensorValueSample = analogRead(sensorSample1);
   EEPROM.put(eepromAddr,sensorValueSample);
   EEPROM.put(0,eepromAddr);                             //-----------CHANGE AS IT CAN HOLD UPTO 255 ONLY
   eepromAddr++; 
   eepromAddr++;
+  #endif
+  #if noOfSensors>=3                
             sensorValueSample = analogRead(sensorSample2);
   EEPROM.put(eepromAddr,sensorValueSample);
   EEPROM.put(0,eepromAddr);     //EEPROM addr 0 stores last eeprom address written. Divide by 4 to see no. of logs.
   eepromAddr++; 
   eepromAddr++; 
+#endif
+#if noOfSensors>=4
            sensorValueSample = analogRead(sensorSample3);
   EEPROM.put(eepromAddr,sensorValueSample);
   EEPROM.put(0,eepromAddr);                             //-----------CHANGE AS IT CAN HOLD UPTO 255 ONLY
   eepromAddr++; 
   eepromAddr++;
+#endif
+#if noOfSensors>=5
            sensorValueSample = analogRead(sensorSample4);
   EEPROM.put(eepromAddr,sensorValueSample);
   EEPROM.put(0,eepromAddr);                             //-----------CHANGE AS IT CAN HOLD UPTO 255 ONLY
   eepromAddr++; 
   eepromAddr++;
+#endif
+#if noOfSensors>=6
            sensorValueSample = analogRead(sensorSample5);
   EEPROM.put(eepromAddr,sensorValueSample);
   EEPROM.put(0,eepromAddr);                             //-----------CHANGE AS IT CAN HOLD UPTO 255 ONLY
   eepromAddr++; 
   eepromAddr++;
+#endif
   //send over radio
   delay(180000); // delay(1799998); //15 mins delay including entire loop delay COMPENSATE EXTRA DELAY AT the END   //make dealy 1799998
   }
