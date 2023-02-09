@@ -21,7 +21,7 @@ NEED to NOTE the time when pin 2 is connected to VCC for timing log-------------
 #include <DallasTemperature.h>
 #include <EEPROM.h>
 
-#define ONE_WIRE_BUS 2
+#define ONE_WIRE_BUS 4
 #define noOfSensors 5
 
 OneWire oneWire(ONE_WIRE_BUS);
@@ -31,7 +31,7 @@ DallasTemperature sensors(&oneWire);
 
 int loggingActive=0;
 
-float sensorValueSample = 0;        // ADC value read from the sensor       
+int sensorValueSample = 0;        // ADC value read from the sensor       
 
 int eepromAddr=2;
 int addr=2;
@@ -63,42 +63,37 @@ loggingActive=digitalRead(2);
   delay(10);
   
   #if noOfSensors>=1        
-            sensorValueSample = sensors.getTempCByIndex(0);
+            sensorValueSample = (int)sensors.getTempCByIndex(0);
   EEPROM.put(eepromAddr,sensorValueSample);
-  eepromAddr++;
-  eepromAddr++;
+ eepromAddr += sizeof(int);
   #endif        
   #if noOfSensors>=2    
-            sensorValueSample = sensors.getTempCByIndex(1);
+            sensorValueSample = (int)sensors.getTempCByIndex(1);
   EEPROM.put(eepromAddr,sensorValueSample);
   EEPROM.put(0,eepromAddr);                             //-----------CHANGE AS IT CAN HOLD UPTO 255 ONLY
-  eepromAddr++; 
-  eepromAddr++;
+ eepromAddr += sizeof(int);
   #endif
   #if noOfSensors>=3                
-            sensorValueSample = sensors.getTempCByIndex(2);
+            sensorValueSample = (int)sensors.getTempCByIndex(2);
   EEPROM.put(eepromAddr,sensorValueSample);
   EEPROM.put(0,eepromAddr);     //EEPROM addr 0 stores last eeprom address written. Divide by 4 to see no. of logs.
-  eepromAddr++; 
-  eepromAddr++; 
+ eepromAddr += sizeof(int);
 #endif
 #if noOfSensors>=4
-            sensorValueSample = sensors.getTempCByIndex(3);
+            sensorValueSample = (int)sensors.getTempCByIndex(3);
   EEPROM.put(eepromAddr,sensorValueSample);
   EEPROM.put(0,eepromAddr);                             //-----------CHANGE AS IT CAN HOLD UPTO 255 ONLY
-  eepromAddr++; 
-  eepromAddr++;
+ eepromAddr += sizeof(int);
 #endif
 #if noOfSensors>=5
-            sensorValueSample = sensors.getTempCByIndex(4);
+            sensorValueSample = (int)sensors.getTempCByIndex(4);
   EEPROM.put(eepromAddr,sensorValueSample);
   EEPROM.put(0,eepromAddr);                             //-----------CHANGE AS IT CAN HOLD UPTO 255 ONLY
-  eepromAddr++; 
-  eepromAddr++;
+ eepromAddr += sizeof(int);
 #endif
 
   //send over radio
-  delay(60000); // delay(1799998); //15 mins delay including entire loop delay COMPENSATE EXTRA DELAY AT the END   //make dealy 1799998
+  delay(180000); // delay(1799998); //15 mins delay including entire loop delay COMPENSATE EXTRA DELAY AT the END   //make dealy 1799998
   }
   else{
   if(Serial.available()){
