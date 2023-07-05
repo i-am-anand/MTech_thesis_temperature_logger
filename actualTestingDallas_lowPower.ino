@@ -1,21 +1,9 @@
-/* Code for TWO lm35 sensors temperature value measurement & store in EEPROM & optionally send it over XBee/BT
-Two LM35 sensor on anaolog pins A1 & A4, vcc and gnd. output pin has a bypas 1k resistor + 104capacitor series network going to gnd.
-
-pin 2 - decides whether sensor sampling is active or not - pin 2 connected to vcc:active sampling, connected to gnd: stop sampling and logging
-        if pin 2 is gnd & serial is available, program will change to reading eeprom over serial comm
-pin 8 - permanently high, for connections
-pin A0 - permanently high
-pin A1 - sample's sensor input
-pin A2 - permanently low
-pin A3 - permanently high
-pin A4 - ambient sensor input
-pin A5 - permanently low
-
-overall system - arduino kept in a closed box, powered by power bank/9V battery. Sensors and wires come out of box. One sensor for ambient, and one sticked to Aluminium foil of sample
-to be tested. Antennas of wireless transceivers, if present, inside the box. Arduino will take temperature measurement from both sensors after every 30 min and store in EEPROM 
-and may also send it over wireless channel.
-
-NEED to NOTE the time when pin 2 is connected to VCC for timing log-------------------------------------
+/* 
+ *  Params to set
+ *  variable ref- ref x 4 secs = total delay in sampling
+ *  Wire connection for mode change via pin A5
+ *  sensor resolution set - to 11 bits
+ *  baudrate - 1000000
 */
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -23,15 +11,15 @@ NEED to NOTE the time when pin 2 is connected to VCC for timing log-------------
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 
-#define ONE_WIRE_BUS 4
-#define noOfSensors 5
+#define ONE_WIRE_BUS 9
+#define noOfSensors 4
 
 OneWire oneWire(ONE_WIRE_BUS);
 
 // Pass our oneWire reference to Dallas Temperature. 
 DallasTemperature sensors(&oneWire);
 
-int count=0; //count then of time watchdog timer overflows, incremetn in ISR
+volatile int count=0; //count then of time watchdog timer overflows, incremetn in ISR
 int ref=225; //225: 15 of 4 sec triggers =1 min x 15 =15 mins
 
 int loggingActive=0;
@@ -45,19 +33,20 @@ int temp=0;
 
 void setup() {
   // initialize communications over RF
-  Serial.begin(9600);
-  pinMode(2,INPUT); //for switching mode of the program
-  pinMode(8,OUTPUT); //only for connections
-  digitalWrite(8,HIGH);
+ // pinMode(0,INPUT_PULLUP);
+  Serial.begin(1000000);
+  pinMode(A5,INPUT); //for switching mode of the program
+ // pinMode(8,OUTPUT); //only for connections
+ // digitalWrite(8,HIGH);
   //pinMode(12,INPUT); 
   sensors.begin();
-  watchdogSetup();
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  //sensors.setResolution(insideThermometer, 11);
 }
 
 void loop() {
-loggingActive=digitalRead(2);
-  if(loggingActive && eepromAddr<(EEPROM.length()-12)){         //added eeprom length constriant
+loggingActive=digitalRead(A5);
+if(loggingActive){         //added eeprom length constriant
 /*           memSelect=digitalRead(12);
     if(memSelect){
       eepromAddr=EEPROM.read(0);
@@ -100,19 +89,28 @@ loggingActive=digitalRead(2);
 #endif
 
   //below part eqv to 15 min delay
-  wdt_reset();
+  //wdt_reset();
+  watchdogSetup(1);   //enable wdt
+  count=0;
   while(count<ref){
     sleep_mode(); //sleep for timer x ref seconds, here 225 secs = 15 mins
   }
-  count=0;
+
+ // if(((signed int16_t)eepromAddr)>((signed int16_t)EEPROM.length()-(signed int16_t)(noOfSensors*sizeof(float)))){  //check
+    if(eepromAddr>1024-4*4){
+    while(1)
+      sleep_mode();
+  }
+
 }
   else{
-  if(Serial.available()){
-    Serial.print("Enter 1 to print values");
+  watchdogSetup(0); //disable wdt
+  Serial.println("Enter 1");
+  if(Serial.available()){    
     if(Serial.read()=='1'){
       EEPROM.get(0,temp);
-      //temp=temp+1000;                                      //---------------------SEE MODIFICATION
-      //Serial.println("Temp values 15 mins log, ambient sample alternate:");
+      temp=1024;                                      //---------------------SEE MODIFICATION
+    
       Serial.print("EEPROM addrs:");                                                  //remove
       Serial.println(temp);                                                           //remove
       addr=2;
@@ -133,10 +131,13 @@ ISR(WDT_vect){//put in additional code here
   count++;
 }
 
-void watchdogSetup(void){
+void watchdogSetup(bool input){
   cli();
   wdt_reset();
   WDTCSR |= (1<<WDCE) | (1<<WDE);
-  WDTCSR = (1<<WDIE) | (0<<WDE) | (1<<WDP3);  // 4s / interrupt, no system reset
+  if(input==1)                                   //input 1 means set wdt, 0 means stop wdt
+    WDTCSR = (1<<WDIE) | (0<<WDE) | (1<<WDP3);  // 4s / interrupt, no system reset
+  else
+    WDTCSR = (0<<WDIE) | (0<<WDE);  
   sei();
 }
